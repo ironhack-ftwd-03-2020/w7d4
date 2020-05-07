@@ -1,95 +1,129 @@
-![logo_ironhack_blue 7](https://user-images.githubusercontent.com/23629340/40541063-a07a0a8a-601a-11e8-91b5-2f13e4e6b441.png)
+# Lifting state up
 
-# IronContacts
+We have an App component that manages the list of contacts in the state and a ContactList component that renders the contact as a list. The ContactList gets a prop 'contacts'.
 
-## Introduction
+Now we want to add a button to the list in the ContactList component that, when pressed, deletes the contact from the list. Therefore we have to execute the delete function in the App component because that is where the state is managed.
 
-After Ironhack, you have decided to work in the movie industry, and you've found a job where you need to manage the contacts of a famous producer.
-
-We are going to create a contact management app with React for this producer.
-
-You can find the starter code in the starter code folder of this GitHub repo.
-
-## Submission
-
-- Upon completion, run the following commands
-
-  ```
-  git add .
-  git commit -m "done"
-  git push origin master
-  ```
-
-- Create Pull Request so your TAs can check up your work.
-
-
-
-## Installation
-
-```
-$ cd starter-code
-$ npm install
-$ npm start
-```
-
-
-## Instructions
-
-### Iteration 1 | Display 5 Contacts
-
-Let's take a look at the starter code.
-
-Inside `src` folder, we can find `contacts.json`, a JSON file with the producer's contacts. Import this file and **create an array of the 5 first contacts** to use as your initial state.
-
-Display that array of 5 contacts in a `<table>` and display the `picture`, `name`, and `popularity` of each contact.
-
-To import `contacts.json` in `App.js`, you can simply use:
+#### First we add a new prop to the ContactList - a reference to the delete function
 
 ```js
-import contacts from './contacts.json'
+// src/App.js
+<ContactList
+  contacts={this.state.contacts}
+  deleteContact={this.deleteContact}
+/>
 ```
 
-At the end of this iteration, your application should look like this:
+#### Then we add the button to the ContactList - the onClick references a function that calles the function from the prop
 
-![Screenshot](https://i.imgur.com/fPuwZXv.png)
+```js
+// src/ContactList.js
+<button onClick={() => props.deleteContact(contact.id)}>
+  Delete
+</button>
+```
+
+Now let's add a search field to the top of the list that filters the list for whatever is typed in the search 
+
+#### We create a new component SearchField
+
+```bash
+$ touch src/SearchField
+```
+
+The SearchFiels will display a form so the value in the form has to be connected to the state - but that is in the App component - so the value in the input is a prop
+
+And the onChange handler also triggers a function that the SearchField receives as a prop
+
+```js
+import React, { Component } from 'react';
+
+export default class SearchField extends Component {
+  handleChange = event => {
+    this.props.setQuery(event.target.value);
+  };
+
+  render() {
+    return (
+      <div>
+        <input
+          type='text'
+          name='query'
+          value={this.props.query}
+          onChange={this.handleChange}
+        />
+      </div>
+    );
+  }
+}
+```
+
+This means in the App component we have to use the SearchField component with two props:
+query - that will be the input in the search field
+setQuery - that is the onChange handler from the input
+#### Add query field to the state and the setQuery function to App.js
+```js
+// src/App.js
+
+state = {
+  contacts: contacts.slice(0, 5),
+  query: ''
+};
+
+//
+setQuery = query => {
+  this.setState({
+    query: query
+  });
+};
 
 
-### Iteration 2 | Add New Random Contacts
+<div className='App'>
+  <h1>IronContacts</h1>
+  <button onClick={this.addContact}>Add Random Contact</button>
+  <button onClick={this.sortByName}>Sort by name</button>
+  <button onClick={this.sortByPopularity}>Sort by popularity</button>
 
-In your application, create a *Add Random Contact* button so that every time you click on this button, it adds a new random actor.
+  // Added SearchField
+  <SearchField setQuery={this.setQuery} query={this.state.query} />
 
-First, randomly select a contact from the larger `contacts` array. Then add that contact to the array that lives in your state (that's the previously created array of 5). Don't forget to `setState()` to cause React to re-render the app.
+  <ContactList
+    contacts={this.state.contacts}
+    deleteContact={this.deleteContact}
+  />
+</div>
+```
 
-At the end of this iteration, your website will probably look like this:
+Now we have to change to ContactList component because that should now render the filtered List depending on what is the current value of query in the state of App.js
 
-![Screenshot](https://i.imgur.com/GuNyYiU.png)
+#### Hand in query as a prop to ContactList
+```js
+// src/App.js
+<ContactList
+  contacts={this.state.contacts}
+  deleteContact={this.deleteContact}
+  query={this.state.query}
+/>
+```
 
+Now in the render() of ContactList we don't want to map over props.contact anymore but create a filtered list based on the prop query
 
-### Iteration 3 | Sort Contacts By Name And Popularity
+```js
+src/ContactList.js
+import React from 'react';
 
-The producer asked you to add two new buttons to help them sort their contacts. When you click on one of the buttons, it should **sort the table by `name`** (alphabetically) and when you click the other, it should **sort by `popularity`** (highest first).
+const ContactList = props => {
 
-Don't forget to `setState()` after you sort!
+  const filtered = props.contacts.filter(contact => {
+    return contact.name.toLowerCase().includes(props.query.toLowerCase()) ? true : false
+  });
+  
+  //
 
-This is what you may have at the end of this iteration:
-
-![Screenshot](https://i.imgur.com/vUDGZ7Y.png)
-
-
-### Iteration 4 | Remove Contacts
-
-The producer also would like to remove some of their contacts. Implement a *Delete* button on each row of your `<table>` that will let the user remove the contact they clicked.
-
-When they click, you should get the index of the array of that actor and use it to remove the contact from the array. Don't forget to `setState()` after you remove the contact!
-
-At the end of this iteration, your app may look like this (after playing a little bit with the *Delete* button):
-
-![Screenshot](https://i.imgur.com/N3K1K1k.png)
-
-
-### Iteration 5 | Bonus | Styling
-
-Unfortunately, this contact list isn't production ready. This is the movie business! It has to sparkle! Add some beautiful CSS to make the app "pop". 
-
-
-Happy coding! :heart:
+<tbody>
+  {/* filter the contacts by the `query` that is in the Search component */}
+  {filtered.map(contact => {
+    return (
+      <tr key={contact.id}>
+      //
+```
