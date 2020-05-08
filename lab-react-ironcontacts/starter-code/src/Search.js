@@ -12,7 +12,7 @@ export default class Search extends Component {
         <input
           type="text"
           name="query"
-          ue={this.props.query}
+          value={this.props.query}
           onChange={this.handleChange}
         />
       </div>
